@@ -1,40 +1,40 @@
 import numpy as np
 import random
-import matplotlib.pyplot as plt
-from nds import ndomsort  # TODO: Use ndomsort from pymoo instead
+import json
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.core.population import Population
-from pymoo.decomposition.asf import ASF
-from pymoo.indicators.hv import Hypervolume
 from sklearn.naive_bayes import GaussianNB
 from scipy.spatial.distance import euclidean
-from alive_progress import alive_bar
-import json
+from nds import ndomsort  # TODO: There is probably a Pymoo function for this
+import matplotlib.pyplot as plt
 
 
-class KGBDMOEA(NSGA2):
+class KGB(NSGA2):
     def __init__(
         self,
+        perc_detect_change=0.1,
+        perc_diversity=0.3,
         c_size=13,
         eps=0.0,
-        verbose_clusters=False,
-        verbose_kre=False,
         ps={},
-        pertub_dev=0.1,  # standard deviation of noise
+        pertub_dev=0.1,
+        save_ps=False,
         **kwargs,
     ):
 
         super().__init__(**kwargs)
-        self.eps = eps
-        self.c_size = c_size
+        self.PERTUB_DEV = pertub_dev
+        self.PERC_DIVERSITY = perc_diversity
+        self.PERC_DETECT_CHANGE = perc_detect_change
+        self.EPS = eps
+
+        self.C_SIZE = c_size
         self.ps = ps
-        self.verbose_clusters = verbose_clusters
-        self.verbose = verbose_kre
-        self.rng = np.random.RandomState(self.seed)
-        random.seed(self.seed)
         self.nr_rand_solutions = 50 * self.pop_size
         self.t = 0
-        self.PERTUB_DEV = pertub_dev
+
+        self.rng = np.random.RandomState(self.seed)
+        random.seed(self.seed)
 
     def setup(self, problem, **kwargs):
         assert (
@@ -45,130 +45,80 @@ class KGBDMOEA(NSGA2):
     def knowledge_reconstruction_examination(self):
 
         clusters = self.ps  # set historical PS set as clusters
-        Nc = self.c_size  # set final nr of clusters
+        Nc = self.C_SIZE  # set final nr of clusters
         size = len(self.ps)  # set size iteration to length of cluster
         run_counter = 0  # counter variable to give unique key
 
-        with alive_bar(size - Nc) as bar:
+        # while there are still clusters to be condensed
+        while size > Nc:
 
-            # while there are still clusters to be condensed
-            while size > Nc:
+            counter = 0
+            min_distance = None
+            min_distance_index = []
 
-                counter = 0
-                min_distance = None
-                min_distance_index = []
+            # get clusters that are closest to each other
+            for keys_i in clusters.keys():
+                for keys_j in clusters.keys():
+                    if (
+                        clusters[keys_i]["solutions"]
+                        is not clusters[keys_j]["solutions"]
+                    ):
 
-                for keys_i in clusters.keys():
-                    for keys_j in clusters.keys():
-                        if (
-                            clusters[keys_i]["solutions"]
-                            is not clusters[keys_j]["solutions"]
-                        ):
+                        dst = euclidean(
+                            clusters[keys_i]["centroid"],
+                            clusters[keys_j]["centroid"],
+                        )
 
-                            dst = euclidean(
-                                clusters[keys_i]["centroid"],
-                                clusters[keys_j]["centroid"],
-                            )
+                        if min_distance == None:
+                            min_distance = dst
+                            min_distance_index = [keys_i, keys_j]
+                        elif dst < min_distance:
+                            min_distance = dst
 
-                            if min_distance == None:
-                                min_distance = dst
-                                min_distance_index = [keys_i, keys_j]
-                            elif dst < min_distance:
-                                min_distance = dst
+                            min_distance_index = [keys_i, keys_j]
 
-                                min_distance_index = [keys_i, keys_j]
+                        counter += 1
 
-                            counter += 1
+            # merge closest clusters
+            for solution in clusters[min_distance_index[1]]["solutions"]:
+                clusters[min_distance_index[0]]["solutions"].append(solution)
 
-                if self.verbose_clusters:
-                    print("---------Stats---------")
-                    print("Iteration:             ", run_counter)
-                    print("Comparisons:           ", counter)
-                    print("Nr. of Clusters:       ", len(clusters))
-                    print("Nr. of final clusters  ", Nc)
-                    print("Size:                  ", size)
-                    print("min. distance:         ", min_distance)
-                    print("min. distance clusters:", min_distance_index)
-                    print(
-                        "Cluster:",
-                        min_distance_index[0],
-                        self.ps[min_distance_index[0]],
-                    )
-                    print(
-                        "Cluster:",
-                        min_distance_index[1],
-                        self.ps[min_distance_index[1]],
-                    )
-                    print("Updated Cluster", min_distance_index[0])
-                    print("Removing Cluster", min_distance_index[1])
-                    print()
+            # calculate new centroid for merged cluster
+            clusters[min_distance_index[0]][
+                "centroid"
+            ] = self.calculate_cluster_centroid(
+                clusters[min_distance_index[0]]["solutions"]
+            )
 
-                if self.verbose_clusters:
-                    print(
-                        "Appending Solutions from",
-                        min_distance_index[1],
-                        "to",
-                        min_distance_index[0],
-                    )
+            # remove cluster that was merged
+            del clusters[min_distance_index[1]]
 
-                for solution in clusters[min_distance_index[1]]["solutions"]:
-                    clusters[min_distance_index[0]]["solutions"].append(solution)
+            size -= 1
+            run_counter += 1
 
-                if self.verbose_clusters:
-                    print("Calculating new centroid for cluster", min_distance_index[0])
-
-                if self.verbose_clusters:
-                    print(
-                        "Old Cluster Centroid",
-                        clusters[min_distance_index[0]]["centroid"],
-                    )
-                    print(
-                        "Calculated Centroid",
-                        self.calculate_cluster_centroid(
-                            clusters[min_distance_index[0]]["solutions"]
-                        ),
-                    )
-
-                clusters[min_distance_index[0]][
-                    "centroid"
-                ] = self.calculate_cluster_centroid(
-                    clusters[min_distance_index[0]]["solutions"]
-                )
-
-                if self.verbose_clusters:
-                    print(
-                        "New cluster centroid is",
-                        clusters[min_distance_index[0]]["centroid"],
-                    )
-
-                del clusters[min_distance_index[1]]
-
-                if self.verbose_clusters:
-                    print(clusters.keys())
-
-                size -= 1
-                run_counter += 1
-                bar()
-
-        c = []
-        c_obj = []
+        c = []  # list of centroids
+        c_obj = []  # objective values of centroids
         pop_useful = []
         pop_useless = []
 
+        # get centroids of clusters
         for key in clusters.keys():
             c.append(clusters[key]["centroid"])
 
         # create pymoo population objected to evaluate centroid solutions
         centroid_pop = Population.new("X", c)
 
-        # evaluate population
-
+        # evaluate centroids
         self.evaluator.eval(self.problem, centroid_pop)
 
         for individual in centroid_pop:
             c_obj.append(individual.F)
 
+        # do non-dominated sorting on centroid solutions # TODO: There is probably a Pymoo function for this
         fronts = ndomsort.non_domin_sort(c_obj)
+
+        # add the individuals from the clusters with the best objective values to the useful population
+        # the rest is useless :(
 
         for individual in centroid_pop:
             if self.list_contains_array(fronts[0], individual.F):
@@ -182,6 +132,7 @@ class KGBDMOEA(NSGA2):
                         for cluster_individual in clusters[key]["solutions"]:
                             pop_useless.append(cluster_individual)
 
+        # return useful and useless population and the centroid solutions
         return pop_useful, pop_useless, c
 
     def naive_bayesian_classifier(self, pop_useful, pop_useless):
@@ -189,6 +140,7 @@ class KGBDMOEA(NSGA2):
         labeled_useful_solutions = []
         labeled_useless_solutions = []
 
+        # add labels to solutions
         for individual in pop_useful:
             labeled_useful_solutions.append((individual, +1))
 
@@ -209,25 +161,38 @@ class KGBDMOEA(NSGA2):
         x_train = np.asarray(x_train)
         y_train = np.asarray(y_train)
 
+        # fit the naive bayesian classifier with the training data
         model = GaussianNB()
         model.fit(x_train, y_train)
 
-        # visualize
-        # # generate a lot of random solutions with the dimensions of problem decision space
-        # X_test = rng.rand(nr_rand_solutions, problem.n_var)
+        if self.verbose and self.problem.n_var == 2:
 
-        # # predict wether random solutions are useful or useless
-        # Y_test = model.predict(X_test)
+            # generate a lot of random solutions with the dimensions of problem decision space
+            X_test = self.rng.rand(self.nr_rand_solutions, self.problem.n_var)
 
-        # plt.scatter(x_train[:, 0], x_train[:, 1], c=y_train, s=50, cmap="RdBu")
-        # lim = plt.axis()
-        # plt.scatter(X_test[:, 0], X_test[:, 1], c=Y_test, s=20, cmap="RdBu", alpha=0.2)
-        # plt.axis(lim)
-        # plt.show()
+            # predict wether random solutions are useful or useless
+            Y_test = model.predict(X_test)
+
+            plt.title(f"Naive Bayesian Classification, Generation {self.n_gen}")
+            plt.scatter(x_train[:, 0], x_train[:, 1], c=y_train, s=50, cmap="RdBu")
+            lim = plt.axis()
+            plt.scatter(
+                X_test[:, 0], X_test[:, 1], c=Y_test, s=20, cmap="RdBu", alpha=0.2
+            )
+            # plot legend
+
+            plt.axis(lim)
+            plt.legend(
+                ["useful sols", "useful rand sols", "usel sols", "usel rand sols"],
+                loc="upper right",
+            )
+            plt.show()
 
         return model
 
     def add_to_ps(self):
+
+        """Function that adds current POS to PS with individual keys, each individual is added as a cluster"""
 
         PS_counter = 0
 
@@ -256,10 +221,9 @@ class KGBDMOEA(NSGA2):
         return predicted_pop
 
     def calculate_cluster_centroid(self, solution_cluster):
-        """Function that calculates the centroid for a given cluster of solutions
-        Input: Array of Solutions
-        Output: Centroid Coordinates
-        """
+
+        """Function that calculates the centroid for a given cluster of solutions"""
+
         # Get number of variable shape
         try:
             n_vars = len(solution_cluster[0])
@@ -331,7 +295,7 @@ class KGBDMOEA(NSGA2):
         X, F = pop.get("X", "F")
 
         # the number of solutions to sample from the population to detect the change
-        n_samples = int(np.ceil(len(pop) * self.perc_detect_change))
+        n_samples = int(np.ceil(len(pop) * self.PERC_DETECT_CHANGE))
 
         # choose randomly some individuals of the current population to test if there was a change
         I = np.random.choice(np.arange(len(pop)), size=n_samples)
@@ -340,56 +304,55 @@ class KGBDMOEA(NSGA2):
         # calculate the differences between the old and newly evaluated pop
         delta = ((samples.get("F") - F[I]) ** 2).mean()
 
+        # archive the current POS
         self.add_to_ps()
 
         # if there is an average deviation bigger than eps -> we have a change detected
-        change_detected = delta > self.eps
+        change_detected = delta > self.EPS
 
         if change_detected:
 
+            # increase t counter for unique key of PS
             self.t += 1
 
             if self.verbose:
+
                 # count number of individual solutions in ps
+
                 n_solutions = 0
                 for key in self.ps.keys():
                     n_solutions += len(self.ps[key]["solutions"])
 
                 print(
-                    "--------------------------------------------------------------------"
+                    "-------------------------------------------------------------------------"
                 )
                 print()
                 print("-> Detected environment change")
                 print("-> Number of Clusters in PS", len(self.ps))
                 print("-> Number of Solutions in PS", n_solutions)
-                print(f"-> Conducting Knowledge Reconstruction-Examination (KRE)")
-                print()
 
             # conduct knowledge reconstruction examination
             pop_useful, pop_useless, c = self.knowledge_reconstruction_examination()
 
-            if self.verbose:
-                print()
-                print("-> Number of Clusters in PS after KRE", len(self.ps))
-                print("-> Training Naive Bayesian Classifier")
-
             # Train a naive bayesian classifier
             model = self.naive_bayesian_classifier(pop_useful, pop_useless)
 
-            if self.verbose:
-                print("-> Generating new population")
-
             # generate a lot of random solutions with the dimensions of problem decision space
             X_test = self.random_strategy(self.nr_rand_solutions)
+
             # introduce noise to vary previously useful solutions
             noise = np.random.normal(0, self.PERTUB_DEV, self.problem.n_var)
             noisy_useful_history = np.asarray(pop_useful) + noise
+
             # check wether solutions are within bounds
             noisy_useful_history = self.check_boundaries(noisy_useful_history)
+
             # add noisy useful history to randomly generated solutions
             X_test = np.vstack((X_test, noisy_useful_history))
+
             # predict wether random solutions are useful or useless
             Y_test = model.predict(X_test)
+
             # create list of useful predicted solutions
             predicted_pop = self.predicted_population(X_test, Y_test)
 
@@ -406,11 +369,12 @@ class KGBDMOEA(NSGA2):
             nr_sampled_pop_useful = 0
             nr_random_filler_solutions = 0
 
-            if len(predicted_pop) >= self.pop_size - self.c_size:
+            if len(predicted_pop) >= self.pop_size - self.C_SIZE:
                 init_pop = []
                 predicted_pop = random.sample(
-                    predicted_pop, self.pop_size - self.c_size
+                    predicted_pop, self.pop_size - self.C_SIZE
                 )
+
                 # add sampled solutions to init_pop
                 for solution in predicted_pop:
                     init_pop.append(solution)
@@ -425,6 +389,7 @@ class KGBDMOEA(NSGA2):
                         len(init_pop),
                     )
             else:
+
                 # if not enough predicted solutions are available, add all predicted solutions to init_pop
                 init_pop = []
 
@@ -435,7 +400,7 @@ class KGBDMOEA(NSGA2):
                 for solution in c:
                     init_pop.append(np.asarray(solution))
 
-            # if there are still not enough solutions in init_pop randomly sample previously useful solutions without noise to init_pop
+            # if there are still not enough solutions in init_pop randomly sample previously useful solutions directly without noise to init_pop
             if len(init_pop) < self.pop_size:
 
                 if self.verbose:
@@ -443,6 +408,7 @@ class KGBDMOEA(NSGA2):
                     print(
                         f"Only {len(init_pop)} predicted solutions available, filling with previous useful solutions"
                     )
+
                 # fill up init_pop with randomly sampled solutions from pop_usefull
                 if len(pop_useful) >= self.pop_size - len(init_pop):
 
@@ -463,6 +429,7 @@ class KGBDMOEA(NSGA2):
 
             # if there are still not enough solutions in init_pop generate random solutions with the dimensions of problem decision space
             if len(init_pop) < self.pop_size:
+
                 if self.verbose:
                     print(
                         f"Only {len(init_pop)} solutions available, filling with random solutions"
@@ -521,6 +488,6 @@ class KGBDMOEA(NSGA2):
         )
 
         # dump self.ps to file
-        # TODO: WRITE PS TO FILE AND END OF OPTIMIZATION -> shorter exec time?
+        # TODO: How do i WRITE PS TO FILE at the end of optimization run -> shorter exec time?
         with open("ps.json", "w") as fp:
             json.dump(self.ps, fp)
