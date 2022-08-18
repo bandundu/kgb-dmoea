@@ -1,4 +1,4 @@
-# kgb-dmoea-py
+# kgb-dmoea
 
 A Python implementation of the **K**nowledge **G**uided **B**ayesian **D**ynamic **M**ulti-**O**bjective **E**volutionary **A**lgorithm (KGB-DMOEA).
 
