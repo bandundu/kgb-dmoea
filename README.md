@@ -4,7 +4,7 @@ A Python implementation of the **K**nowledge **G**uided **B**ayesian **D**ynamic
 
 ## Description
 
-The algorithm is implemented based on [1]. KGB-DMOEA saves historical Pareto-Optimal Solutions in an archive. When environmental change is detected, a knowledge reconstruction-examination strategy (KRE) is conducted in order to divide historical optimal solutions into useful and useless solutions for the current environment. Subsequently a naive Bayesian classifier is trained by using the classified historical solutions as samples. This results in a predicted population for the new environment that can then be optimized using any population based algorithm.
+The algorithm is implemented based on [1]. KGB-DMOEA saves historical Pareto-Optimal Solutions in an archive. When environmental change is detected, a knowledge reconstruction-examination strategy (KRE) is conducted in order to divide historical optimal solutions into useful and useless solutions for the current environment. Subsequently a naive Bayesian classifier is trained by using the classified historical solutions as samples. The trained classifier is able to predict from a set of randomly generated solutions, which ones are useful to the new environment. This results in a predicted population for the new environment that can then be optimized using any population based algorithm.
 
 The implementation uses [Pymoo](https://github.com/anyoptimization/pymoo) as a framework [2].
 
