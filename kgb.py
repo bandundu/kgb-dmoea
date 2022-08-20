@@ -1,12 +1,17 @@
 import numpy as np
 import random
 import json
+import matplotlib.pyplot as plt
+
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.core.population import Population
 from sklearn.naive_bayes import GaussianNB
+
+# TODO: There is probably a Pymoo module for euclidean distance
 from scipy.spatial.distance import euclidean
-from nds import ndomsort  # TODO: There is probably a Pymoo function for this
-import matplotlib.pyplot as plt
+
+# TODO: There is probably a Pymoo module for this non-dominated sorting
+from nds import ndomsort
 
 
 class KGB(NSGA2):
@@ -56,7 +61,7 @@ class KGB(NSGA2):
             min_distance = None
             min_distance_index = []
 
-            # get clusters that are closest to each other
+            # get clusters that are closest to each other by calculating the euclidean distance
             for keys_i in clusters.keys():
                 for keys_j in clusters.keys():
                     if (
