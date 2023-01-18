@@ -15,7 +15,7 @@ The implementation uses [Pymoo](https://github.com/anyoptimization/pymoo) as a f
 
 ## Support and contributions
 
-Feel free to contact Charles David Mupende s4chmupe@uni-trier.de if you have any questions or suggestions in regards to the implementation. For question concerning the algorithm, please contact the original authors.
+Feel free to contact me charlesdavid@mupende.com if you have any questions or suggestions in regards to the implementation. For question concerning the algorithm, please contact the original authors.
 
 ## References
 
