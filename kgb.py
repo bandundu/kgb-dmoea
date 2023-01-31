@@ -4,6 +4,7 @@ import json
 import matplotlib.pyplot as plt
 
 from pymoo.algorithms.moo.nsga2 import NSGA2
+from pymoo.algorithms.moo.moead import MOEAD
 from pymoo.core.population import Population
 from sklearn.naive_bayes import GaussianNB
 
