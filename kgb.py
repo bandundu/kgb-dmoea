@@ -1,7 +1,6 @@
 import numpy as np
 import random
 import json
-import matplotlib.pyplot as plt
 from pymoo.algorithms.moo.nsga2 import NSGA2
 from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from pymoo.core.population import Population
@@ -9,6 +8,7 @@ from sklearn.naive_bayes import GaussianNB
 
 # TODO: There is probably a Pymoo module for euclidean distance
 from scipy.spatial.distance import euclidean
+
 
 class KGB(NSGA2):
     def __init__(
@@ -111,7 +111,7 @@ class KGB(NSGA2):
 
         # evaluate centroids
         self.evaluator.eval(self.problem, centroid_pop)
-            
+
         # do non-dominated sorting on centroid solutions
         ranking = NonDominatedSorting().do(centroid_pop.get("F"), return_rank=True)[-1]
 
@@ -161,29 +161,6 @@ class KGB(NSGA2):
         # fit the naive bayesian classifier with the training data
         model = GaussianNB()
         model.fit(x_train, y_train)
-
-        if self.verbose and self.problem.n_var == 2:
-
-            # generate a lot of random solutions with the dimensions of problem decision space
-            X_test = self.rng.rand(self.nr_rand_solutions, self.problem.n_var)
-
-            # predict wether random solutions are useful or useless
-            Y_test = model.predict(X_test)
-
-            plt.title(f"Naive Bayesian Classification, Generation {self.n_gen}")
-            plt.scatter(x_train[:, 0], x_train[:, 1], c=y_train, s=50, cmap="RdBu")
-            lim = plt.axis()
-            plt.scatter(
-                X_test[:, 0], X_test[:, 1], c=Y_test, s=20, cmap="RdBu", alpha=0.2
-            )
-            # plot legend
-
-            plt.axis(lim)
-            plt.legend(
-                ["useful sols", "useful rand sols", "usel sols", "usel rand sols"],
-                loc="upper right",
-            )
-            plt.show()
 
         return model
 
