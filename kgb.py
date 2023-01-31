@@ -289,21 +289,6 @@ class KGB(NSGA2):
             # increase t counter for unique key of PS
             self.t += 1
 
-            if self.verbose:
-
-                # count number of individual solutions in ps
-                n_solutions = 0
-                for key in self.ps.keys():
-                    n_solutions += len(self.ps[key]["solutions"])
-
-                print(
-                    "-------------------------------------------------------------------------"
-                )
-                print()
-                print("-> Detected environment change")
-                print("-> Number of Clusters in PS", len(self.ps))
-                print("-> Number of Solutions in PS", n_solutions)
-
             # conduct knowledge reconstruction examination
             pop_useful, pop_useless, c = self.knowledge_reconstruction_examination()
 
@@ -329,13 +314,6 @@ class KGB(NSGA2):
             # create list of useful predicted solutions
             predicted_pop = self.predicted_population(X_test, Y_test)
 
-            if self.verbose:
-                print("-> Known Useful solutions", len(pop_useful))
-                print("-> Known Useless solutions", len(pop_useless))
-                print(
-                    f"-> Available predicted solutions {len(predicted_pop)} from {len(X_test)} random generated solutions",
-                )
-
             # ------ POPULATION GENERATION --------
             # take a random sample from predicted pop and known useful pop
 
@@ -356,11 +334,6 @@ class KGB(NSGA2):
                 for solution in c:
                     init_pop.append(np.asarray(solution))
 
-                if self.verbose:
-                    print(
-                        "-> Number of Solutions after initial Population generation",
-                        len(init_pop),
-                    )
             else:
 
                 # if not enough predicted solutions are available, add all predicted solutions to init_pop
@@ -375,12 +348,6 @@ class KGB(NSGA2):
 
             # if there are still not enough solutions in init_pop randomly sample previously useful solutions directly without noise to init_pop
             if len(init_pop) < self.pop_size:
-
-                if self.verbose:
-                    print()
-                    print(
-                        f"Only {len(init_pop)} predicted solutions available, filling with previous useful solutions"
-                    )
 
                 # fill up init_pop with randomly sampled solutions from pop_usefull
                 if len(pop_useful) >= self.pop_size - len(init_pop):
@@ -402,11 +369,6 @@ class KGB(NSGA2):
 
             # if there are still not enough solutions in init_pop generate random solutions with the dimensions of problem decision space
             if len(init_pop) < self.pop_size:
-
-                if self.verbose:
-                    print(
-                        f"Only {len(init_pop)} solutions available, filling with random solutions"
-                    )
 
                 nr_random_filler_solutions = self.pop_size - len(init_pop)
 
