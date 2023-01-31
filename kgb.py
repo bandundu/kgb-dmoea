@@ -2,17 +2,14 @@ import numpy as np
 import random
 import json
 import matplotlib.pyplot as plt
-
 from pymoo.algorithms.moo.nsga2 import NSGA2
-from pymoo.algorithms.moo.moead import MOEAD
 from pymoo.core.population import Population
 from sklearn.naive_bayes import GaussianNB
 
 # TODO: There is probably a Pymoo module for euclidean distance
 from scipy.spatial.distance import euclidean
 
-# TODO: There is probably a Pymoo module for this non-dominated sorting
-from nds import ndomsort
+from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 
 
 class KGB(NSGA2):
@@ -103,7 +100,6 @@ class KGB(NSGA2):
             run_counter += 1
 
         c = []  # list of centroids
-        c_obj = []  # objective values of centroids
         pop_useful = []
         pop_useless = []
 
@@ -116,25 +112,21 @@ class KGB(NSGA2):
 
         # evaluate centroids
         self.evaluator.eval(self.problem, centroid_pop)
+            
+        # do non-dominated sorting on centroid solutions
+        ranking = NonDominatedSorting().do(centroid_pop.get("F"), return_rank=True)[-1]
 
-        for individual in centroid_pop:
-            c_obj.append(individual.F)
+        # add the individuals from the clusters with the best objective values to the useful population the rest is useless :(
 
-        # do non-dominated sorting on centroid solutions # TODO: There is probably a Pymoo function for this
-        fronts = ndomsort.non_domin_sort(c_obj)
-
-        # add the individuals from the clusters with the best objective values to the useful population
-        # the rest is useless :(
-
-        for individual in centroid_pop:
-            if self.list_contains_array(fronts[0], individual.F):
+        for idx, rank in enumerate(ranking):
+            if rank == 0:
                 for key in clusters.keys():
-                    if individual.X == clusters[key]["centroid"]:
+                    if centroid_pop[idx].X == clusters[key]["centroid"]:
                         for cluster_individual in clusters[key]["solutions"]:
                             pop_useful.append(cluster_individual)
             else:
                 for key in clusters.keys():
-                    if individual.X == clusters[key]["centroid"]:
+                    if centroid_pop[idx].X == clusters[key]["centroid"]:
                         for cluster_individual in clusters[key]["solutions"]:
                             pop_useless.append(cluster_individual)
 
