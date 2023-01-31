@@ -3,14 +3,12 @@ import random
 import json
 import matplotlib.pyplot as plt
 from pymoo.algorithms.moo.nsga2 import NSGA2
+from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from pymoo.core.population import Population
 from sklearn.naive_bayes import GaussianNB
 
 # TODO: There is probably a Pymoo module for euclidean distance
 from scipy.spatial.distance import euclidean
-
-from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
-
 
 class KGB(NSGA2):
     def __init__(
@@ -30,6 +28,7 @@ class KGB(NSGA2):
         self.PERC_DIVERSITY = perc_diversity
         self.PERC_DETECT_CHANGE = perc_detect_change
         self.EPS = eps
+        self.save_ps = save_ps
 
         self.C_SIZE = c_size
         self.ps = ps
@@ -316,7 +315,6 @@ class KGB(NSGA2):
             if self.verbose:
 
                 # count number of individual solutions in ps
-
                 n_solutions = 0
                 for key in self.ps.keys():
                     n_solutions += len(self.ps[key]["solutions"])
@@ -440,30 +438,6 @@ class KGB(NSGA2):
                     (init_pop, self.random_strategy(self.pop_size - len(init_pop)))
                 )
 
-            if self.verbose:
-                print()
-                print("Population Markup:")
-                print()
-                print("-> Number of predicted solutions", len(predicted_pop))
-                print("-> Number of centroid solutions", len(c))
-                print(
-                    "-> Number of directly sampled known usefull solutions",
-                    nr_sampled_pop_useful,
-                )
-                print(
-                    "-> Number of random filler solutions", nr_random_filler_solutions
-                )
-                print("-> Number of final solutions", len(init_pop))
-                print()
-                print(
-                    "=========================================================================="
-                )
-                print(
-                    "n_gen  |  n_eval  | n_nds  |      igd      |       gd      |       hv     "
-                )
-                print(
-                    "=========================================================================="
-                )
             # recreate the current population without being evaluated
             pop = Population.new(X=init_pop)
 
@@ -486,6 +460,6 @@ class KGB(NSGA2):
         )
 
         # dump self.ps to file
-        # TODO: How do i WRITE PS TO FILE at the end of optimization run -> shorter exec time?
-        with open("ps.json", "w") as fp:
-            json.dump(self.ps, fp)
+        if self.save_ps:
+            with open("ps.json", "w") as fp:
+                json.dump(self.ps, fp)
