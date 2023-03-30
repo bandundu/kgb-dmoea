@@ -184,8 +184,8 @@ class KGB(NSGA2):
 
             PS_counter += 1
 
-    def list_contains_array(self, lst, arr):
-        return any(np.array_equal(arr, elem) for elem in lst)
+    #def list_contains_array(self, lst, arr):
+    #    return any(np.array_equal(arr, elem) for elem in lst)
 
     def predicted_population(self, X_test, Y_test):
         predicted_pop = []
