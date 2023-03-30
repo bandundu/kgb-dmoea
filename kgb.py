@@ -43,6 +43,7 @@ class KGB(NSGA2):
             not problem.has_constraints()
         ), "KGB-DMOEA only works for unconstrained problems."
         return super().setup(problem, **kwargs)
+    
 
     def knowledge_reconstruction_examination(self):
 
@@ -183,9 +184,6 @@ class KGB(NSGA2):
             }
 
             PS_counter += 1
-
-    #def list_contains_array(self, lst, arr):
-    #    return any(np.array_equal(arr, elem) for elem in lst)
 
     def predicted_population(self, X_test, Y_test):
         predicted_pop = []
