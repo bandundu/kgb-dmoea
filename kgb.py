@@ -6,8 +6,11 @@ from pymoo.util.nds.non_dominated_sorting import NonDominatedSorting
 from pymoo.core.population import Population
 from sklearn.naive_bayes import GaussianNB
 
-# TODO: There is probably a Pymoo module for euclidean distance
-from scipy.spatial.distance import euclidean
+
+def euclidean_distance(a, b):
+    a = np.array(a)
+    b = np.array(b)
+    return np.sqrt(np.sum((a - b) ** 2))
 
 
 class KGB(NSGA2):
@@ -67,7 +70,7 @@ class KGB(NSGA2):
                         is not clusters[keys_j]["solutions"]
                     ):
 
-                        dst = euclidean(
+                        dst = euclidean_distance(
                             clusters[keys_i]["centroid"],
                             clusters[keys_j]["centroid"],
                         )
@@ -132,6 +135,7 @@ class KGB(NSGA2):
 
         # return useful and useless population and the centroid solutions
         return pop_useful, pop_useless, c
+    
 
     def naive_bayesian_classifier(self, pop_useful, pop_useless):
 

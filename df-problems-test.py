@@ -14,8 +14,6 @@ from pymoo.indicators.hv import Hypervolume
 from statistics import mean
 from kgb import KGB
 
-
-
 # Experimental Settings
 n_var = 5
 change_frequency = 10
@@ -23,7 +21,7 @@ change_severity = 1
 pop_size = 100
 max_n_gen = 30 * change_frequency
 termination = get_termination("n_gen", max_n_gen)
-problem_string = "df3"
+problem_string = "df1"
 verbose = False
 seed = 1
 
