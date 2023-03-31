@@ -42,6 +42,12 @@ class KGB(NSGA2):
         random.seed(self.seed)
 
     def setup(self, problem, **kwargs):
+        """
+        Set up the KGB-DMOEA algorithm.
+        :param problem: The optimization problem instance
+        :param kwargs: Additional keyword arguments
+        :return: The result of the superclass setup method
+        """
         assert (
             not problem.has_constraints()
         ), "KGB-DMOEA only works for unconstrained problems."
@@ -49,7 +55,10 @@ class KGB(NSGA2):
     
 
     def knowledge_reconstruction_examination(self):
-
+        """
+        Perform the knowledge reconstruction examination.
+        :return: Tuple containing the useful population, useless population, and cluster centroids
+        """
         clusters = self.ps  # set historical PS set as clusters
         Nc = self.C_SIZE  # set final nr of clusters
         size = len(self.ps)  # set size iteration to length of cluster
@@ -138,7 +147,12 @@ class KGB(NSGA2):
     
 
     def naive_bayesian_classifier(self, pop_useful, pop_useless):
-
+        """
+        Train a naive Bayesian classifier using the useful and useless populations.
+        :param pop_useful: Useful population
+        :param pop_useless: Useless population
+        :return: Trained GaussianNB classifier
+        """
         labeled_useful_solutions = []
         labeled_useless_solutions = []
 
@@ -170,8 +184,9 @@ class KGB(NSGA2):
         return model
 
     def add_to_ps(self):
-
-        """Function that adds current POS to PS with individual keys, each individual is added as a cluster"""
+        """
+        Add the current Pareto optimal set (POS) to the Pareto set (PS) with individual keys.
+        """
 
         PS_counter = 0
 
@@ -190,6 +205,12 @@ class KGB(NSGA2):
             PS_counter += 1
 
     def predicted_population(self, X_test, Y_test):
+        """
+        Create a predicted population from the test set with positive labels.
+        :param X_test: Test set of features
+        :param Y_test: Test set of labels
+        :return: Predicted population
+        """
         predicted_pop = []
         for i in range(len(Y_test)):
             if Y_test[i] == 1:
@@ -197,9 +218,11 @@ class KGB(NSGA2):
         return predicted_pop
 
     def calculate_cluster_centroid(self, solution_cluster):
-
-        """Function that calculates the centroid for a given cluster of solutions"""
-
+        """
+        Calculate the centroid for a given cluster of solutions.
+        :param solution_cluster: List of solutions in the cluster
+        :return: Cluster centroid
+        """
         # Get number of variable shape
         try:
             n_vars = len(solution_cluster[0])
@@ -227,7 +250,11 @@ class KGB(NSGA2):
         return [x / length for x in centroid_points]
 
     def check_boundaries(self, pop):
-
+        """
+        Check and fix the boundaries of the given population.
+        :param pop: Population to check and fix boundaries
+        :return: Population with corrected boundaries
+        """
         # check wether numpy array or pymoo population is given
         if isinstance(pop, Population):
             pop = pop.get("X")
@@ -242,7 +269,11 @@ class KGB(NSGA2):
         return pop
 
     def random_strategy(self, N_r):
-        """Function that returns a randomly generated population in boundaries"""
+        """
+        Generate a random population within the problem boundaries.
+        :param N_r: Number of random solutions to generate
+        :return: Randomly generated population
+        """
         # generate a random population of size N_r
         # TODO: Check boundaries
         random_pop = np.random.random((N_r, self.problem.n_var))
@@ -258,7 +289,11 @@ class KGB(NSGA2):
         return random_pop
 
     def diversify_population(self, pop):
-
+        """
+        Introduce diversity in the population by replacing a percentage of individuals.
+        :param pop: Population to diversify
+        :return: Diversified population
+        """
         # find indices to be replaced (introduce diversity)
         I = np.where(np.random.random(len(pop)) < self.PERC_DIVERSITY)[0]
         # replace with randomly sampled individuals
@@ -266,7 +301,9 @@ class KGB(NSGA2):
         return pop
 
     def _advance(self, **kwargs):
-
+        """
+        Advance the optimization algorithm by one iteration.
+        """
         pop = self.pop
         X, F = pop.get("X", "F")
 
